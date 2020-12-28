@@ -1,97 +1,56 @@
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import cgi
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import urllib 
+from urllib.parse import *
+import os
 
-tasklist = ['Task 1', 'Task 2', 'Task 3']
+# HTTPRequestHandler class
+class HTTPServer_RequestHandler(BaseHTTPRequestHandler):
 
-class requestHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-       if self.path.endswith('/tasklist'):
-            self.send_response(200)
-            self.send_header('content-type', 'text/html')
-            self.end_headers()
+    def _set_headers(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
 
-            output = ''
-            output += '<html><body>'
-            output += '<h1> Task List </h1>'
-            output += '<h3><a href="/tasklist/new">Add new Task</a></h3>'
+    def doPathParse(self,path):
+        parsePath = urlparse(path)
+        filePath = parsePath.path
+        fileQuery = parsePath.query
+        fileDecode = urllib.parse.parse_qs(fileQuery)
+        result = {"parse":parsePath, "path":filePath , "query": fileQuery, "decodeQuery": fileDecode}
+        return result
 
-            for task in tasklist:
-                output += task
-                output += '<a href="/tasklist/%s/remove">X</a>' %task
-                output += '</br>'
-            output += '</body></html>'
-            self.wfile.write(output.encode())
-       if self.path.endswith('/new'):
-            self.send_response(200)
-            self.send_header('content-type', 'text/html')
-            self.end_headers()
 
-            output = ''
-            output += '<html><body>'
-            output += '<h1>Add new task</h1>'
+    def convertDict(self, path):
+        dataURL = self.doPathParse(path)['path']
+        head_tail = os.path.split(dataURL)
+        param = head_tail[1]
+        data = param.replace('&',' ')
+        dataList = data.split(' ')
+        dictParam = {}
 
-            output += '<form method="POST" enctype="multipart/form-data" action="/tasklist/new">'
-            output += '<input name="task" type="text" placeholder="Add new task">'
-            output += '<input type="submit" value="Add">'
-            output += '</form>'
-            output += '</body></html>'
+        for m in dataList:
+            cad = m.split('=')
 
-            self.wfile.write(output.encode())
-
-       if self.path.endswith('/remove'):
-            listIDPath = self.path.split('/')[2]
-            print(listIDPath)
-            self.send_response(200)
-            self.send_header('content-type', 'text/html')
-            self.end_headers()
-        
-            output = ''
-            output += '<html><body>'
-            output += '<h1>Remove task: %s</h1>' % listIDPath.replace('%20', ' ')
-            output += '<form method="POST" enctype="multipart/form-data" action="/tasklist/%s/remove">' % listIDPath
-            output += '<input type="submit" value="Remove">'
-            output += '</form>'
-            output += '<a href="/tasklist">Cancel</a>'
-            output += '</body></html>'
-
-            self.wfile.write(output.encode())
+            if cad[0]=='name':
+                dictParam['name'] = cad[1]
+            if cad[0]== 'last':
+                dictParam['last'] = cad[1]
+        return dictParam
 
     def do_POST(self):
-        if self.path.endswith('/new'):
-            ctype, pdict = cgi.parse_header(self.headers.get('content-type'))
-            pdict['boundary'] = bytes(pdict['boundary'], "utf-8")
-            content_len = int(self.headers.get('Content-length'))
-            pdict['CONTENT-LENGHT'] = content_len
+        path = self.path
+        print (self.convertDict(path)['name'])
 
-            if ctype == 'multipart/form-data':
-                fields = cgi.parse_multipart(self.rfile, pdict)
-                new_task = fields.get('task')
-                tasklist.append(new_task[0])
-            
-            self.send_response(301)
-            self.send_header('content-type', 'text/html')
-            self.send_header('Location', '/tasklist')
-            self.end_headers()
+        self._set_headers()
+        self.wfile.write(bytes("ok","UTF-8"))
 
-        if self.path.endswith('/remove'):
-            listIDPath = self.path.split('/')[2]
-            ctype, pdict = cgi.parse_header(self.headers.get('content-type'))
-            if ctype == 'multipart/form-data':
-                list_item = listIDPath.replace('%20', ' ')
-                tasklist.remove(list_item)
 
-            self.send_response(301)
-            self.send_header('content-type', 'text/html')
-            self.send_header('Location', '/tasklist')
-            self.end_headers()
-
-def main():
-    PORT = 9000
-    server_address = ('localhost', PORT)
-    server = HTTPServer(server_address, requestHandler)
-    print('Server running on port %s' % PORT)
-    server.serve_forever()
+def run(server_class=HTTPServer, handler_class=HTTPServer_RequestHandler):
+    print('starting server...')
+    server_address = ('localhost', 8081)
+    httpd = server_class(server_address, HTTPServer_RequestHandler)
+    print('running server...')
+    httpd.serve_forever()
 
 if __name__ == '__main__':
-    main()    
-
+    run()
