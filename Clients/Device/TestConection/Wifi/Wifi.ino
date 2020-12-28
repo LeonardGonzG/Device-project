@@ -1,12 +1,14 @@
 #include <SoftwareSerial.h>
 #define RX 2
 #define TX 3
+
 String AP = "FAMILIA-AGUDELO";       // AP NAME
 String PASS = "1061279933eliza25098761"; // AP PASSWORD
-//String API = "IBXCK9EA6H0PVDP2";   // Write API KEY
-String HOST = "192.168.101.5";//"api.thingspeak.com";
-String PORT = "80";
-String field = "field1";
+
+String HOST = "192.168.101.8";
+String PORT = "8081";
+String field = "numero";
+
 int countTrueCommand;
 int countTimeCommand; 
 boolean found = false; 
